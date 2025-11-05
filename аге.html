@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Билеты на матчи — Комета</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      padding: 30px 0;
+      background: rgba(0,0,0,0.3);
+      border-radius: 15px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    h1, h2, h3 {
+      margin: 0;
+      color: #fff;
+    }
+    .slogan {
+      font-style: italic;
+      color: #fdd835;
+      margin-top: 10px;
+      font-size: 1.2em;
+    }
+    .btn {
+      background: #fdd835;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #ffec47; }
+
+    .match {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    .admin-panel {
+      background: rgba(0,0,0,0.4);
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+    }
+    .bookings-list {
+      margin-top: 20px;
+    }
+    .booking-item {
+      background: rgba(255,255,255,0.1);
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚽ Комета — Официальные билеты</h1>
+      <p class="slogan">У кометы есть девиз — никогда не падать вниз!</p>
+    </header>
+
+    <main id="main-content">
+      <!-- Матчи -->
+      <h2>Предстоящие матчи</h2>
+      <div id="matches-list"></div>
+
+      <!-- Кнопка входа для админа -->
+      <div style="text-align:center; margin-top:40px;">
+        <button onclick="showAdmin()" class="btn">🔐 Войти как администратор</button>
+      </div>
+    </main>
+
+    <!-- Админ-панель (скрыта по умолчанию) -->
+    <div id="admin-panel" style="display:none;" class="admin-panel">
+      <h2>Админ-панель</h2>
+      <form id="add-match-form">
+        <h3>Добавить матч</h3>
+        <input type="text" id="match-title" placeholder="Название матча (например: Комета vs Метеор)" required />
+        <input type="datetime-local" id="match-date" required />
+        <input type="number" id="tickets-count" placeholder="Количество билетов" min="1" required />
+        <button type="submit" class="btn">Добавить матч</button>
+      </form>
+
+      <div class="bookings-list">
+        <h3>Забронированные билеты</h3>
+        <div id="bookings-display"></div>
+      </div>
+
+      <button onclick="logoutAdmin()" class="btn" style="background:#e53935;">Выйти</button>
+    </div>
+  </div>
+
+  <script>
+    // Ключ для админа (в реальности — на сервере)
+    const ADMIN_PASSWORD = "cometa2025";
+
+    // Иницилизация данных
+    function init() {
+      if (!localStorage.getItem('matches')) {
+        localStorage.setItem('matches', JSON.stringify([]));
+      }
+      if (!localStorage.getItem('bookings')) {
+        localStorage.setItem('bookings', JSON.stringify([]));
+      }
+      renderMatches();
+      renderBookings();
+    }
+
+    // Отображение матчей
+    function renderMatches() {
+      const matches = JSON.parse(localStorage.getItem('matches'));
+      const container = document.getElementById('matches-list');
+      container.innerHTML = '';
+
+      matches.forEach((match, index) => {
+        const matchEl = document.createElement('div');
+        matchEl.className = 'match';
+        matchEl.innerHTML = `
+          <h3>${match.title}</h3>
+          <p><strong>Дата:</strong> ${new Date(match.date).toLocaleString()}</p>
+          <p><strong>Билетов доступно:</strong> ${match.tickets}</p>
+          <button onclick="bookTicket(${index})" ${match.tickets <= 0 ? 'disabled' : ''} class="btn">
+            ${match.tickets <= 0 ? 'Распродано' : 'Забронировать билет'}
+          </button>
+        `;
+        container.appendChild(matchEl);
+      });
+    }
+
+    // Бронирование билета
+    function bookTicket(matchIndex) {
+      const matches = JSON.parse(localStorage.getItem('matches'));
+      const bookings = JSON.parse(localStorage.getItem('bookings'));
+
+      if (matches[matchIndex].tickets > 0) {
+        const name = prompt("Введите ваше имя:");
+        if (!name) return;
+
+        matches[matchIndex].tickets--;
+        const booking = {
+          match: matches[matchIndex].title,
+          date: matches[matchIndex].date,
+          user: name,
+          time: new Date().toLocaleString()
+        };
+        bookings.push(booking);
+
+        localStorage.setItem('matches', JSON.stringify(matches));
+        localStorage.setItem('bookings', JSON.stringify(bookings));
+
+        alert(`Билет забронирован! До встречи на матче, ${name}!`);
+        renderMatches();
+        if (document.getElementById('admin-panel').style.display === 'block') {
+          renderBookings();
+        }
+      }
+    }
+
+    // Показ админ-панели
+    function showAdmin() {
+      const pass = prompt("Введите пароль администратора:");
+      if (pass === ADMIN_PASSWORD) {
+        document.getElementById('main-content').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        renderBookings();
+      } else {
+        alert("Неверный пароль!");
+      }
+    }
+
+    // Выход из админки
+    function logoutAdmin() {
+      document.getElementById('admin-panel').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+    }
+
+    // Добавление матча
+    document.getElementById('add-match-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('match-title').value;
+      const date = document.getElementById('match-date').value;
+      const tickets = parseInt(document.getElementById('tickets-count').value);
+
+      const matches = JSON.parse(localStorage.getItem('matches'));
+      matches.push({ title, date, tickets });
+      localStorage.setItem('matches', JSON.stringify(matches));
+
+      document.getElementById('add-match-form').reset();
+      renderMatches();
+      alert("Матч добавлен!");
+    });
+
+    // Отображение бронирований в админке
+    function renderBookings() {
+      const bookings = JSON.parse(localStorage.getItem('bookings'));
+      const container = document.getElementById('bookings-display');
+      container.innerHTML = bookings.length === 0
+        ? "<p>Нет забронированных билетов.</p>"
+        : '';
+
+      bookings.forEach(book => {
+        const el = document.createElement('div');
+        el.className = 'booking-item';
+        el.innerHTML = `<strong>${book.user}</strong> забронировал билет на матч <em>${book.match}</em> (${book.time})`;
+        container.appendChild(el);
+      });
+    }
+
+    // Инициализация при загрузке
+    window.onload = init;
+  </script>
+</body>
+</html>
